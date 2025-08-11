@@ -1,0 +1,141 @@
+
+
+package com.lifecompass.controller;
+
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseAuthException;
+import com.google.firebase.auth.UserRecord;
+import com.lifecompass.config.FirebaseConfig;
+import com.lifecompass.dao.PsychologistDao;
+import com.lifecompass.dao.impl.PsychologistDaoFirestoreImpl;
+import com.lifecompass.model.FirebaseService;
+import com.lifecompass.model.Psychologist;
+import com.lifecompass.model.VerificationRequestModel;
+
+import java.time.LocalDate;
+import java.util.Date;
+import java.util.List;
+import java.util.Map; // Import Map
+import java.util.concurrent.ExecutionException;
+
+public class PsychologistRegistrationController {
+
+    private final FirebaseAuth firebaseAuth;
+    private final PsychologistDaoFirestoreImpl psychologistDao1;
+
+    public PsychologistRegistrationController() {
+        FirebaseConfig.initialize();
+        this.firebaseAuth = FirebaseConfig.getFirebaseAuth();
+        this.psychologistDao1 = new PsychologistDaoFirestoreImpl();
+    }
+
+    public boolean registerPsychologist(String fullName, String gender, LocalDate dateOfBirth, String phoneNumber,
+                                        String email, String profilePictureUrl, String qualification, // profilePictureUrl is expected to be a URL
+                                        List<String> specializations, int yearsOfExperience, String licenseNumber,
+                                        String issuingAuthority, List<String> languagesKnown, String workMode,
+                                        String availability, double consultationFee, String clinicName,
+                                        String clinicAddress, String clinicCity, String clinicState,
+                                        String clinicPinCode, String googleMapsLink, String username, String password,
+                                        Map<String, String> documentUrls) { // documentUrls is expected to be a map of URLs
+        if (email.isEmpty() || password.isEmpty() || fullName.isEmpty() || qualification.isEmpty() ||
+                phoneNumber.isEmpty() || licenseNumber.isEmpty()) {
+            System.err.println("Required fields for psychologist registration are missing.");
+            return false;
+        }
+
+        String firebaseAuthUid = null; // To store UID for potential rollback
+
+        try {
+            // 1. Create User in Firebase Auth
+            UserRecord.CreateRequest request = new UserRecord.CreateRequest()
+                    .setEmail(email)
+                    .setPassword(password)
+                    .setDisplayName(fullName)
+                    .setEmailVerified(false)
+                    .setDisabled(false);
+
+            UserRecord userRecord = firebaseAuth.createUser(request);
+            firebaseAuthUid = userRecord.getUid();
+            System.out.println("Successfully created new psychologist in Firebase Auth: " + firebaseAuthUid);
+
+            // 2. Create Psychologist object and save to Firestore
+            Psychologist psychologist = new Psychologist();
+            psychologist.setId(firebaseAuthUid);
+            psychologist.setFullName(fullName);
+            psychologist.setGender(gender);
+            psychologist.setDateOfBirth(dateOfBirth);
+            psychologist.setPhoneNumber(phoneNumber);
+            psychologist.setEmail(email);
+            psychologist.setProfilePictureUrl(profilePictureUrl); // Use the provided URL directly
+            psychologist.setQualification(qualification);
+            psychologist.setSpecialties(specializations);
+            psychologist.setYearsOfExperience(yearsOfExperience);
+            psychologist.setLicenseNumber(licenseNumber);
+            psychologist.setIssuingAuthority(issuingAuthority);
+            psychologist.setLanguagesKnown(languagesKnown);
+            psychologist.setWorkMode(workMode);
+            psychologist.setAvailability(availability);
+            psychologist.setConsultationFee(consultationFee);
+            psychologist.setClinicName(clinicName);
+            psychologist.setClinicAddress(clinicAddress);
+            psychologist.setClinicCity(clinicCity);
+            psychologist.setClinicState(clinicState);
+            psychologist.setClinicPinCode(clinicPinCode);
+            psychologist.setGoogleMapsLink(googleMapsLink);
+            psychologist.setUsername(username);
+            psychologist.setUploadedDocumentUrls(documentUrls); // Use the provided map of URLs directly
+         
+            psychologist.setVerificationStatus("pending"); // Default verification status
+            psychologistDao1.addPsychologist(psychologist);
+            System.out.println("Psychologist details saved to Firestore for UID: " + userRecord.getUid());
+            
+// 3. Create and save a VerificationRequestModel using FirebaseService
+            VerificationRequestModel verificationRequest = new VerificationRequestModel();
+            // ID will be auto-generated by the addVerificationRequest method in FirebaseService
+            verificationRequest.setEntityId(firebaseAuthUid);
+            verificationRequest.setEntityName(fullName);
+            verificationRequest.setEntityEmail(email);
+            verificationRequest.setRole("Psychologist");
+            verificationRequest.setRequestType("Psychologist Verification");
+            verificationRequest.setStatus("Under Review"); // Consistent status for admin tab filtering
+            verificationRequest.setSubmittedAt(new Date());
+            verificationRequest.setDocumentsUploaded(documentUrls != null && !documentUrls.isEmpty());
+            verificationRequest.setDocumentUrls(documentUrls != null ? List.copyOf(documentUrls.values()) : null);
+
+            // Call the static method in FirebaseService to add the request
+            // This method throws checked exceptions, so it must be handled or declared.
+            // It's now part of the main try block.
+            FirebaseService.addVerificationRequest(verificationRequest);
+            System.out.println("Verification request added for admin review for psychologist: " + fullName);
+            
+            return true;
+            
+
+        } catch (FirebaseAuthException e) {
+            System.err.println("Firebase Auth Error during psychologist registration: " + e.getMessage());
+            // Rollback Firebase Auth user if creation failed
+            if (firebaseAuthUid != null) {
+                try {
+                    firebaseAuth.deleteUser(firebaseAuthUid);
+                    System.out.println("Rolled back Firebase Auth user: " + firebaseAuthUid);
+                } catch (FirebaseAuthException ex) {
+                    System.err.println("Error rolling back Firebase Auth user: " + ex.getMessage());
+                }
+            }
+            return false;
+        } catch (ExecutionException | InterruptedException e) {
+            System.err.println("Firestore Error during psychologist data storage: " + e.getMessage());
+            // Rollback Firebase Auth user if Firestore save failed
+            if (firebaseAuthUid != null) {
+                try {
+                    firebaseAuth.deleteUser(firebaseAuthUid);
+                    System.out.println("Rolled back Firebase Auth user due to Firestore error: " + firebaseAuthUid);
+                } catch (FirebaseAuthException ex) {
+                    System.err.println("Error rolling back Firebase Auth user: " + ex.getMessage());
+                }
+            }
+            // No file rollback here as controller doesn't handle uploads or manage external URLs
+            return false;
+        }
+    }
+}
