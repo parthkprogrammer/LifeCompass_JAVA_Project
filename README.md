@@ -75,8 +75,11 @@ lifecompasfinal11/
     - Update API keys in their respective `ApiClient` classes (e.g., Music, Articles, Activities).
 
 ## 📸 Screenshots
-
-*(Add UI screenshots here for better presentation)*
+UI screenshots here for better presentation
+<img width="1903" height="1056" alt="Screenshot 2025-08-14 181755" src="https://github.com/user-attachments/assets/8af2067e-ebb3-47f3-8b70-e18c4d204b32" />
+<img width="1919" height="1079" alt="Screenshot 2025-08-14 214201" src="https://github.com/user-attachments/assets/5fee0ab7-1768-4fb7-bb3a-7263175e5c61" />
+<img width="1919" height="1047" alt="Screenshot 2025-08-14 214712" src="https://github.com/user-attachments/assets/ced46d62-6fa6-44fd-a40a-8f6918d1622a" />
+<img width="1916" height="1053" alt="Screenshot 2025-08-14 214757" src="https://github.com/user-attachments/assets/80fdcec9-d617-44c1-a2db-ab6d6f8e3098" />
 
 ## 📜 License
 
