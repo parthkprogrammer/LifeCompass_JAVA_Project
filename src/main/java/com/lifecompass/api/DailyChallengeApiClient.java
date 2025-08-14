@@ -15,10 +15,10 @@ import java.util.concurrent.CompletableFuture;
 public class DailyChallengeApiClient {
 
     // --- IMPORTANT: REPLACE WITH YOUR ACTUAL GEMINI API KEY ---
-    private static final String GEMINI_API_KEY = "AIzaSyAxj0rIEqBQQ0ValBcnnk5iiK5Uqj9IlHo"; // <--- PASTE YOUR GEMINI API KEY HERE
+    private static final String GEMINI_API_KEY = "GEMINI_API_KEY"; // <--- PASTE YOUR GEMINI API KEY HERE
     // -----------------------------------------------------------------
 
-    private static final String GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent"; // Using gemini-pro for better text generation
+    private static final String GEMINI_API_URL = "GEMINI_API_URL"; // Using gemini-pro for better text generation
 
     private final HttpClient httpClient;
     private final ObjectMapper objectMapper;
